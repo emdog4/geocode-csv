@@ -11,49 +11,27 @@ var mapsObject = function (name, address, latitude, longitude) {
 
 $(function()
 {
-    $('#submit-new').click(function()
+    $("#submit-new").click(function()
     {
-        var config = buildConfig($("#hasheaders").prop('checked'), true, main, error);
+        var config = buildConfig($("#hasheaders").prop("checked"), true, main, error);
 
-        $('#file-new').parse({
+        $("#file-new").parse({
             config: config
         });
 
-        $("#useexisting").prop('checked', false);
-
     });
 
-    $('#submit-listings').click(function()
-    {
-        var config = buildConfig(false, true, buildAutocomplete, error);
-
-        $('#file-listings').parse({
-            config: config
-        });
-
-        var selector =  $("#alert-listing");
-        selector.attr("class", "alert alert-success");
-        selector.html("<strong>Success</strong> Listings were processed");
-        selector.show();
-
-    });
-
-    $('#submit-datasource').click(function()
+    $("#submit-datasource").click(function()
     {
         var config = buildConfig(false, true, setDatasource, error);
 
-        $('#file-datasource').parse({
+        $("#file-datasource").parse({
             config: config
         });
 
-        var selector =  $("#alert-datasource");
-        selector.attr("class", "alert alert-success");
-        selector.html("<strong>Success</strong> Datasource was processed");
-        selector.show();
-
     });
 
-    $('#submit-calculate').click(function()
+    $("#submit-calculate").click(function()
     {
         if(isSynced())
             run();
@@ -95,12 +73,11 @@ function main()
 
     var output = generatePointReferences(points);
 
-    var datasourcefile = writeToDownload(output, 'datasourcelink').csvfile;
-    var listingsfile = writeToDownload(searchable, 'listingslink').csvfile;
+    var datasourcefile = writeToDownload(output, "datasourcelink").csvfile;
 
     setDatasource(datasourcefile);
 
-    buildAutocomplete(listingsfile);
+    buildAutocomplete(datasourcefile);
 }
 
 function error(error, file)
@@ -130,7 +107,7 @@ function compile(data)
         {
             var address = street + ", " + city + ", " + state + ", " + zip;
 
-            searchable[i] = name + " " + address;
+            //searchable[i] = name + " " + address;
 
 
         }
@@ -152,7 +129,7 @@ function geocode(address)
 
     $.ajax({ url: baseURL,
         async: false,
-        dataType: 'json',
+        dataType: "json",
         success: function(data)
         {
             var geocode = data.results[0];
@@ -224,7 +201,7 @@ function writeToDownload(output, element)
         text += output.csv[i] + "\r\n";
     }
 
-    var data = new Blob([text], {type: 'text/plain'});
+    var data = new Blob([text], {type: "text/plain"});
 
     if (file !== null) {
         window.URL.revokeObjectURL(file);
@@ -234,7 +211,7 @@ function writeToDownload(output, element)
 
     var link = document.getElementById(element);
     link.href = file;
-    link.style.display = 'block';
+    link.style.display = "block";
 
     return {
         csvfile: data
@@ -331,12 +308,12 @@ function detectBrowser()
     var useragent = navigator.userAgent;
     var mapdiv = document.getElementById("map-canvas");
 
-    if (useragent.indexOf('iPhone') != -1 || useragent.indexOf('Android') != -1 ) {
-        mapdiv.style.width = '100%';
-        mapdiv.style.height = '100%';
+    if (useragent.indexOf("iPhone") != -1 || useragent.indexOf("Android") != -1 ) {
+        mapdiv.style.width = "100%";
+        mapdiv.style.height = "100%";
     } else {
-        mapdiv.style.width = '800px';
-        mapdiv.style.height = '600px';
+        mapdiv.style.width = "800px";
+        mapdiv.style.height = "600px";
     }
 }
 
@@ -363,7 +340,7 @@ function geolocate()
             var infowindow = new google.maps.InfoWindow({
                 map: map,
                 position: pos,
-                content: 'Location found using HTML5.'
+                content: "Location found using HTML5."
             });
 
             return {
@@ -382,9 +359,9 @@ function geolocate()
 function handleNoGeolocation(errorFlag)
 {
     if (errorFlag) {
-        var content = 'Error: The Geolocation API service failed.';
+        var content = "Error: The Geolocation API service failed.";
     } else {
-        var content = 'Error: Your browser doesn\'t support geolocation.';
+        var content = "Error: Your browser doesn't support geolocation.";
     }
 
     var options = {
@@ -402,6 +379,6 @@ function performLookup(index, radius, variables)
 {
     var lookup = variables[index];
 
-    return variables.filter(function(item) { return (item != lookup) && ; });
+    //return variables.filter(function(item) { return (item != lookup) && ; });
 
 }

@@ -23,38 +23,23 @@
 
 <fieldset>
     <h2>Step 1</h2>
-    <div id="alert-datasource" class="alert alert-success" style="display: none"></div>
-    <div id="alert-listings" class="alert alert-success" style="display: none"></div>
 
-    <label for="file-new">Convert a new CSV file:</label>
+    <label for="file-new">Convert a CSV file:</label>
     <input type="file" id="file-new" multiple>
-
     <label for="hasheaders">File has a header row:</label>
     <input type="checkbox" id="hasheaders">
     <button id="submit-new">Convert</button>
+    <a download="datasource.csv" id="datasourcelink" style="display: none">datasource</a>
 
-    <div id="info-convert" class="alert alert-info" style="display: none"><strong>Files converted.</strong> Please save the <a download="datasource.csv" id="datasourcelink" >datasource</a> and <a download="listings.csv" id="listingslink" >business listings</a>.</div>
     <p><strong>or:</strong></p>
 
-    <label for="file-listings">Upload a new business listing file:</label>
-    <input type="file" id="file-listings" multiple>
-    <button id="submit-listings">Upload</button>
-
-    <p><strong>and</strong></p>
-    <label for="file-datasource">Upload a new data source file:</label>
+    <label for="file-datasource">Use an existing data source:</label>
     <input type="file" id="file-datasource" multiple>
     <button id="submit-datasource">Upload</button>
-
-    <p><strong>or:</strong></p>
-
-    <label for="useexisting">Use existing files on server:</label>
-    <input type="checkbox" id="useexisting" checked>
-
 </fieldset>
 
 <fieldset>
     <h2>Step 2</h2>
-    <div id="alert-location" class="alert alert-success" style="display: none"></div>
 
     <label for="currentlocation">Use my current location:</label>
     <input type="checkbox" id="currentlocation" checked>
@@ -67,7 +52,6 @@
 
 <fieldset>
     <h2>Step 3</h2>
-    <div id="alert-display" class="alert alert-success" style="display: none"></div>
 
     <label>Select a radius to search:</label>
     <select id="radius">
@@ -78,7 +62,7 @@
         <option value="500">500 miles</option>
     </select>
 
-    <label for="usemap">Display points on map:</label>
+    <label for="usemap">Show results on map:</label>
     <input type="checkbox" id="usemap" checked>
 
     <label for="printresults">Show results on this page:</label>
