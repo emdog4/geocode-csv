@@ -18,12 +18,15 @@ var listings = [];
 var isNew = false;
 var fieldsets;
 var distances;
+var markersArray = [];
 var out;
 
 $(function()
 {
     fieldsets = $("fieldset");
     out = $("#distance-results");
+    var dd = $("#directions-div");
+    var radiusLookup = {25:10, 50:9, 100:8, 200:7, 500:6};
 
     var lookup;
 
@@ -45,6 +48,9 @@ $(function()
 
     $("#submit-location").click(function()
     {
+        $(fieldsets[0]).children().prop('disabled',true);
+        $(out).empty();
+
         var success = false;
 
         if($("#current-location").prop("checked"))
@@ -82,10 +88,18 @@ $(function()
 
     $("#submit-calculate").click(function()
     {
+        $(out).empty();
+
+        $(fieldsets[1]).children().prop('disabled',true);
+        $(fieldsets[1]).find("input:text").prop('disabled',true);
+
+        var selects = $(dd).find("select");
+        var radius = $("#lookup-radius").val();
+
         detectBrowser();
 
         map = new google.maps.Map(document.getElementById("map-canvas"), {
-            zoom: 8,
+            zoom: radiusLookup[radius],
             panControl: true,
             zoomControl: true,
             scaleControl: true
@@ -96,10 +110,7 @@ $(function()
         directionsDisplay = new google.maps.DirectionsRenderer();
         directionsDisplay.setMap(map);
 
-        var dd = $("#directions-div");
-        var selects = $(dd).find("select");
-
-        distances = performDistanceLookup(lookup, $("#lookup-radius").val()).results;
+        distances = performDistanceLookup(lookup, radius).results;
 
         for (var i = 0; i < distances.length; i++)
         {
@@ -111,11 +122,45 @@ $(function()
             option.setAttribute("value", i.toString());
 
             $(selects).append(option);
-
-            logger([mapsObject.name, mapsObject.distance].join(" = ") + " miles");
+            //logger([mapsObject.name, mapsObject.distance].join(" = ") + " miles");
         }
 
         $(dd).fadeIn("slow");
+
+        $(fieldsets[2]).children().prop('disabled',true);
+    });
+
+    $("#submit-reset").click(function()
+    {
+        $(dd).find("select").empty();
+        $(out).empty();
+
+        $(fieldsets[2]).find("select").val("25");
+
+        var input = $(fieldsets[1]).find("input:text");
+        input.val("");
+        input.prop("disabled",false);
+
+        $(fieldsets[1]).find("input:checkbox").removeAttr("checked");
+
+        $(fieldsets[1]).children().prop("disabled",false);
+        $(fieldsets[2]).children().prop("disabled",false);
+
+        clearOverlays();
+
+        document.getElementById("map-canvas").remove();
+
+        var newDiv = document.createElement("div");
+        newDiv.setAttribute("id", "map-canvas");
+        var dirDiv = document.getElementById("directions-div");
+
+        lookup = null;
+        distances = [];
+
+        $(dd).fadeOut();
+        $(fieldsets[2]).fadeOut();
+
+        dirDiv.parentNode.insertBefore(newDiv, dirDiv.nextSibling);
     });
 });
 
@@ -330,6 +375,8 @@ function setNewMarker(object, center)
         title: object.name
     });
 
+    markersArray.push(marker);
+
     google.maps.event.addListener(marker, 'click', function() {
         infowindow.open(map, marker);
     });
@@ -409,6 +456,9 @@ function lngLat(object)
         {lat:object.lat, lng:object.lng} : {lat:34.000791, lng:-81.034849};
 }
 
+/**
+ * Calculate directions using Google Maps API
+ */
 function calculateRoute()
 {
     var start = distances[$("#directions-start").val()];
@@ -429,4 +479,16 @@ function calculateRoute()
             directionsDisplay.setDirections(response);
         }
     });
+}
+
+/**
+ * Clear markers from map
+ */
+function clearOverlays()
+{
+    for (var i = 0; i < markersArray.length; i++ )
+    {
+        markersArray[i].setMap(null);
+    }
+    markersArray.length = 0;
 }
