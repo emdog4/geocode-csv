@@ -20,8 +20,15 @@ var isNew = false;
 
 $(function()
 {
-    $("#submit-new").button();
-    $("#submit-datasource").button();
+    var submitNew = $("#submit-new");
+    submitNew.button();
+
+    var submitDatasource = $("#submit-datasource");
+    submitDatasource.button();
+
+    var submitCalculate = $("#submit-calculate");
+    submitCalculate.button();
+
     $("#file-new").button();
     $("#file-datasource").button();
     $("#current-location").button();
@@ -29,9 +36,7 @@ $(function()
     $("#print-results").button();
     $("#has-headers").button();
 
-    $("#submit-calculate").button();
-
-    $("#submit-new").click(function()
+    submitNew.click(function()
     {
         isNew = true;
 
@@ -40,14 +45,14 @@ $(function()
         });
     });
 
-    $("#submit-datasource").click(function()
+    submitDatasource.click(function()
     {
         $("#file-datasource").parse({
             config: buildConfig(true, true, main, error)
         });
     });
 
-    $("#submit-calculate").click(run);
+    submitCalculate.click(run);
 
     $("#lookup-radius").selectmenu();
 });
