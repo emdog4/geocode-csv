@@ -17,6 +17,7 @@ var searchable = [];
 var listings = [];
 var isNew = false;
 var fieldsets;
+var distances;
 var out;
 
 $(function()
@@ -31,7 +32,7 @@ $(function()
         isNew = true;
 
         $("#file-new").parse({
-            config: buildConfig($("#has-headers").prop("checked"), true, main, error)
+            config: buildConfig(true, true, main, error)
         });
     });
 
@@ -92,15 +93,29 @@ $(function()
 
         setNewMarker(lookup, true);
 
-        var array = performDistanceLookup(lookup, $("#lookup-radius").val()).results;
+        directionsDisplay = new google.maps.DirectionsRenderer();
+        directionsDisplay.setMap(map);
 
-        for (var i = 0; i < array.length; i++)
+        var dd = $("#directions-div");
+        var selects = $(dd).find("select");
+
+        distances = performDistanceLookup(lookup, $("#lookup-radius").val()).results;
+
+        for (var i = 0; i < distances.length; i++)
         {
-            var mapsObject = array[i];
+            var mapsObject = distances[i];
             setNewMarker(mapsObject, false);
+
+            var option = document.createElement("option");
+            option.appendChild(document.createTextNode(mapsObject.name));
+            option.setAttribute("value", i.toString());
+
+            $(selects).append(option);
 
             logger([mapsObject.name, mapsObject.distance].join(" = ") + " miles");
         }
+
+        $(dd).fadeIn("slow");
     });
 });
 
@@ -256,6 +271,8 @@ function createDownloadLink(searchable)
     $("#datasource-link").attr("href", file).show();
 }
 
+var directionsDisplay;
+var directionsService = new google.maps.DirectionsService();
 var map;
 
 /**
@@ -390,4 +407,26 @@ function lngLat(object)
 {
     return (object.lat && object.lng) ?
         {lat:object.lat, lng:object.lng} : {lat:34.000791, lng:-81.034849};
+}
+
+function calculateRoute()
+{
+    var start = distances[$("#directions-start").val()];
+    var end = distances[$("#directions-end").val()];
+
+    var origin = new google.maps.LatLng(start.lat, start.lng);
+    var destination = new google.maps.LatLng(end.lat, end.lng);
+
+    var request = {
+        origin: origin,
+        destination:destination,
+        travelMode: google.maps.TravelMode.DRIVING
+    };
+
+    directionsService.route(request, function(response, status)
+    {
+        if (status == google.maps.DirectionsStatus.OK) {
+            directionsDisplay.setDirections(response);
+        }
+    });
 }

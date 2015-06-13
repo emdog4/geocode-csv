@@ -71,6 +71,18 @@
     </select>
     <button id="submit-calculate">Go</button>
 
+    <div id="directions-div" hidden>
+        <p>Directions:</p>
+
+        Start:
+        <select id="directions-start" onchange="calculateRoute();">
+        </select>
+
+        End:
+        <select id="directions-end" onchange="calculateRoute();">
+        </select>
+    </div>
+
 </fieldset>
 
 <div id="distance-results"></div>
