@@ -2,13 +2,27 @@
  * Created by emery on 6/11/15.
  */
 
-var mapsObject = function (name, address, latitude, longitude) {
+/**
+ * Maps Object model
+ * @param name
+ * @param address
+ * @param latitude
+ * @param longitude
+ * @constructor
+ */
+var MapsObject = function (name, address, latitude, longitude) {
     this.name = name;
     this.address = address;
     this.latitude = latitude;
     this.longitude = longitude;
 };
 
+var searchable = [];
+var listings = [];
+
+/**
+ * onClick callbacks for Steps 1 and 4
+ */
 $(function()
 {
     $("#submit-new").click(function()
@@ -31,16 +45,17 @@ $(function()
 
     });
 
-    $("#submit-calculate").click(function()
-    {
-        if(isSynced())
-            run();
-        else
-            debug();
-    });
-
+    $("#submit-calculate").click(run);
 });
 
+/**
+ * Papaparser config object helper function
+ * @param header
+ * @param skipEmptyLines
+ * @param complete
+ * @param error
+ * @returns {{header: *, skipEmptyLines: *, complete: *, error: *}}
+ */
 function buildConfig(header, skipEmptyLines, complete, error)
 {
     return {
@@ -51,9 +66,10 @@ function buildConfig(header, skipEmptyLines, complete, error)
     };
 }
 
-var datasource = [];
-var listings = [];
-
+/**
+ * Main function that is run when CSV file is parsed
+ * @arguments data, errors, element
+ */
 function main()
 {
     var errors = arguments[0].errors;
@@ -63,21 +79,20 @@ function main()
         console.log("WARNING: There was an error parsing the CSV file.", errors);
     }
 
-    var points = compile(arguments[0].data).points;
-    var searchable = compile(arguments[0].data).listings;
+    var searchable = buildSearchableMapsObjects(arguments[0].data).list;
 
-    if(points.length != arguments[0].data.length || points.length != searchable.length)
+    if(searchable.length != arguments[0].data.length)
     {
         console.log("WARNING: There was an error geocoding.", errors);
     }
 
-    var output = generatePointReferences(points);
+    createDownloadLink(searchable);
 
-    var datasourcefile = writeToDownload(output, "datasourcelink").csvfile;
+    listings = searchable.map(function(item) {
+        return [item.name, item.address].join(" ");
+    });
 
-    setDatasource(datasourcefile);
-
-    buildAutocomplete(datasourcefile);
+    $("#listings").autocomplete({source:listings});
 }
 
 function error(error, file)
@@ -85,10 +100,13 @@ function error(error, file)
     console.log("ERROR:", error, file);
 }
 
-function compile(data)
+/**
+ * Creates MapObject for each row parsed from CSV file
+ * @param data
+ * @returns {{list: Array}}
+ */
+function buildSearchableMapsObjects(data)
 {
-    var searchable = [];
-
     for(var i = 0; i < data.length; i++)
     {
         var obj = data[i];
@@ -103,22 +121,23 @@ function compile(data)
         {
             console.log("OUTPUT: Incomplete Address at Line Number: ", i ,street, city, state, zip);
         }
-        else
-        {
-            var address = street + ", " + city + ", " + state + ", " + zip;
 
-            //searchable[i] = name + " " + address;
+        var address = street + ", " + city + ", " + state + ", " + zip;
 
+        var geo = geocode(address);
 
-        }
+        searchable[i] = new MapsObject(name, address, geo.latitude, geo.longitude);
     }
 
     return {
-        listings: searchable,
-        points: locations
-    }
+        list: searchable
+    };
 }
 
+/**
+ * Geocode using Google Maps API, returns latitude and longitude
+ * @param address
+ */
 function geocode(address)
 {
     var baseURL = "https://maps.googleapis.com/maps/api/geocode/json?address=";
@@ -142,42 +161,30 @@ function geocode(address)
     });
 }
 
-function generatePointReferences(points)
+/**
+ * Provides download link to save datasource file
+ * @param output
+ */
+function createDownloadLink(searchable)
 {
-    var deliminator = ",";
+    var file = null;
+    var text = Papa.unparse(searchable);
 
-    var rows = [];
-
-    for(var i = 0; i < points.length; i++)
-    {
-        var str = "";
-
-        for(var j = 0; j < points.length; j++)
-        {
-            if (j > 0)
-                str += deliminator;
-
-            if(i == j)
-                str += "0";
-            else {
-                var distance = getDistance(points[i], points[j]);
-                str += distance.toString();
-            }
-        }
-
-        rows[i] = str;
+    if (file !== null) {
+        window.URL.revokeObjectURL(file);
     }
 
-    if(points.length > rows.length)
-    {
-        console.log("WARNING: There was an error generating the CSV file.");
-    }
+    file = window.URL.createObjectURL(new Blob(text, {type: "text/plain"}));
 
-    return {
-        csv: rows
-    };
+    $("#downloadlink").attr("href", file).show();
 }
 
+/**
+ * Calculates distance between two latitude and longitude points
+ * @param one
+ * @param two
+ * @returns {number}
+ */
 function getDistance(one, two)
 {
     var km2miles = 0.62137;
@@ -191,85 +198,9 @@ function getDistance(one, two)
     return Math.ceil(Math.sqrt(Math.pow(latmiles,2) + Math.pow(lngmiles,2)));
 }
 
-function writeToDownload(output, element)
-{
-    var file = null;
-    var text = "";
-
-    for(var i = 0; i < output.csv.length; i++)
-    {
-        text += output.csv[i] + "\r\n";
-    }
-
-    var data = new Blob([text], {type: "text/plain"});
-
-    if (file !== null) {
-        window.URL.revokeObjectURL(file);
-    }
-
-    file = window.URL.createObjectURL(data);
-
-    var link = document.getElementById(element);
-    link.href = file;
-    link.style.display = "block";
-
-    return {
-        csvfile: data
-    };
-}
-
-function buildAutocomplete()
-{
-    listings = arguments[0].data;
-
-    $("#listings").autocomplete({source:listings});
-}
-
-function setDatasource()
-{
-    datasource = arguments[0].data;
-}
-
-function isSynced()
-{
-    return datasource && listings;
-}
-
-function debug()
-{
-    if(!datasource) {
-        var selector =  $("#alert-datasource");
-        selector.removeClass("alert-success").addClass("alert-error");
-        selector.html("<strong>Error</strong> A Listings file was not found.");
-        selector.show();
-    }
-
-    if(!listings) {
-        var selector =  $("#alert-listing");
-        selector.removeClass("alert-success").addClass("alert-error");
-        selector.html("<strong>Error</strong> A Listings file was not found.");
-        selector.show();
-    };
-
-    if(!$("#currentlocation").checkbox().checked() || $("#listings").value.length == 0) {
-        var selector =  $("#alert-location");
-        selector.removeClass("alert-success").addClass("alert-error");
-        selector.html("<strong>Error</strong> A location was not selected.");
-        selector.show();
-    }
-
-    if(!$("#usemap").checkbox().checked() && !$("#printresults").checkbox().checked()) {
-        var selector =  $("#alert-display");
-        selector.removeClass("alert-success").addClass("alert-warning");
-        selector.html("<strong>Warning</strong> No display method was selected.");
-        selector.show();
-    }
-}
-
 /**
- * maps
+ * Support
  */
-
 
 var map;
 
@@ -285,22 +216,31 @@ function run()
         scaleControl: true
     }
 
-    var mapelement = $("#map-canvas");
+    var mapid = $("#map-canvas");
 
-    map = new google.maps.Map(mapelement,
+    map = new google.maps.Map(mapid,
         mapOptions);
 
-    mapelement.show();
+    mapid.show();
 
     var position;
 
     if($("#currentlocation").checkbox().checked())
-        position = geolocate().location;
+    {
+        setMapCenter("Current Location", geolocate().location);
+    }
     else
+    {
+        var index =  listings.map(function(object, index)
+        {
+            if(object == $("#listings").val())
+                return index;
+        });
 
+        var listing = searchable[index];
 
-    if (position)
-        addMarker(position);
+        setMapCenter(listing.name, new google.maps.LatLng(listing.latitude, listing.longitude));
+    }
 }
 
 function detectBrowser()
@@ -317,56 +257,35 @@ function detectBrowser()
     }
 }
 
-function addMarker(latlng)
-{
-    var marker = new google.maps.Marker({
-        position: latlng,
-        title:"Hello World!"
-    });
-
-    marker.setMap(map);
-}
-
+/**
+ * Geolocate using Google Map API, returns LatLng object
+ */
 function geolocate()
 {
-    var content;
-
     if(navigator.geolocation)
     {
         navigator.geolocation.getCurrentPosition(function(position)
         {
-            var pos = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-
-            var infowindow = new google.maps.InfoWindow({
-                map: map,
-                position: pos,
-                content: "Location found using HTML5."
-            });
-
             return {
-                location: pos
+                location: new google.maps.LatLng(position.coords.latitude, position.coords.longitude)
             };
 
         }, function() {
-            handleNoGeolocation(true);
+            setMapCenter("Error: The Geolocation API service failed.", false);
         });
     } else {
-        handleNoGeolocation(false);
+        setMapCenter("Error: Your browser doesn't support geolocation.", false);
     }
 
 }
 
-function handleNoGeolocation(errorFlag)
+function setMapCenter(content, latlng)
 {
-    if (errorFlag) {
-        var content = "Error: The Geolocation API service failed.";
-    } else {
-        var content = "Error: Your browser doesn't support geolocation.";
-    }
+    var position = latlng || new google.maps.LatLng(34.000791, -81.034849);
 
     var options = {
         map: map,
-        position: new google.maps.LatLng(60, 105),
+        position: position,
         content: content
     };
 
