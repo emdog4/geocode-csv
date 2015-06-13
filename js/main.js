@@ -16,27 +16,17 @@ var MapsObject = function (name, address, lat, lng) {
 var searchable = [];
 var listings = [];
 var isNew = false;
-
+var fieldsets;
+var out;
 
 $(function()
 {
-    var submitNew = $("#submit-new");
-    submitNew.button();
+    fieldsets = $("fieldset");
+    out = $("#distance-results");
 
-    var submitDatasource = $("#submit-datasource");
-    submitDatasource.button();
+    var lookup;
 
-    var submitCalculate = $("#submit-calculate");
-    submitCalculate.button();
-
-    $("#file-new").button();
-    $("#file-datasource").button();
-    $("#current-location").button();
-    $("#use-map").button();
-    $("#print-results").button();
-    $("#has-headers").button();
-
-    submitNew.click(function()
+    $("#submit-new").click(function()
     {
         isNew = true;
 
@@ -45,17 +35,83 @@ $(function()
         });
     });
 
-    submitDatasource.click(function()
+    $("#submit-datasource").click(function()
     {
         $("#file-datasource").parse({
             config: buildConfig(true, true, main, error)
         });
     });
 
-    submitCalculate.click(run);
+    $("#submit-location").click(function()
+    {
+        var success = false;
 
-    $("#lookup-radius").selectmenu();
+        if($("#current-location").prop("checked"))
+        {
+            var object = geolocate();
+
+            success = (object !== undefined);
+
+            if (success)
+                lookup = new MapsObject("Current Location", "", object.lat, object.lng);
+            else
+                logger("Geolocation failed. Please check your browser settings or select an address.");
+        }
+        else
+        {
+            var index = listings.map(function(object, index)
+            {
+                if(object == $("#autocomplete-listings").val())
+                    return index;
+            }).filter(isFinite);
+
+            success = (index !== undefined && index >= 0 );
+
+            if (success)
+                lookup = searchable[index];
+            else
+                logger("We could not find the business name you entered. Please select a value from the dropdown menu.");
+        }
+
+        if (success)
+            $(fieldsets[2]).fadeIn("slow");
+        else
+            logger("Please try again.")
+    });
+
+    $("#submit-calculate").click(function()
+    {
+        detectBrowser();
+
+        map = new google.maps.Map(document.getElementById("map-canvas"), {
+            zoom: 8,
+            panControl: true,
+            zoomControl: true,
+            scaleControl: true
+        });
+
+        setNewMarker(lookup, true);
+
+        var array = performDistanceLookup(lookup, $("#lookup-radius").val()).results;
+
+        for (var i = 0; i < array.length; i++)
+        {
+            var mapsObject = array[i];
+            setNewMarker(mapsObject, false);
+
+            logger([mapsObject.name, mapsObject.distance].join(" = ") + " miles");
+        }
+    });
 });
+
+/**
+ * Logger helper function
+ * @param string
+ */
+function logger(string)
+{
+    out.append("<p>" + string + "</p>");
+}
 
 /**
  * Papaparser config object helper function
@@ -104,7 +160,9 @@ function main()
         return [item.name, item.address].join(" ");
     });
 
-    $("#listings").autocomplete({source:listings});
+    $("#autocomplete-listings").autocomplete({source:listings});
+
+    $(fieldsets[1]).fadeIn("slow");
 }
 
 function error(error, file)
@@ -187,8 +245,7 @@ function geocode(name, address, index)
 function createDownloadLink(searchable)
 {
     var file = null;
-    var json = JSON.stringify(searchable);
-    var text = Papa.unparse(json);
+    var text = Papa.unparse(JSON.stringify(searchable));
 
     if (file !== null) {
         window.URL.revokeObjectURL(file);
@@ -200,58 +257,6 @@ function createDownloadLink(searchable)
 }
 
 var map;
-
-/**
- * Function when Go button pressed
- */
-function run()
-{
-    detectBrowser();
-
-    map = new google.maps.Map($("#map-canvas").show(), {
-        zoom: 14,
-        center: new google.maps.LatLng,
-        panControl: true,
-        zoomControl: true,
-        scaleControl: true
-    });
-
-    var lookup;
-
-    if($("#current-location").prop("checked"))
-    {
-        var object = geolocate();
-        lookup = new MapsObject("Current Location", "", object.lat, object.lng)
-        setNewMarker(lookup, true);
-    }
-    else
-    {
-        var index =  listings.map(function(object, index)
-        {
-            if(object == $("#listings").val())
-                return index;
-        }).filter(isFinite);
-
-        lookup = searchable[index];
-
-        setNewMarker(lookup, false);
-    }
-
-    var print = $("#print-results").prop("checked");
-
-    if (print)
-        var results = $("#distance-results").show();
-
-    var res = performLookup(lookup,$("#lookup-radius").val()).results;
-
-    for (var object in res) {
-
-        setNewMarker(object, false);
-
-        if (print)
-            results.append("<p>" + [object.name, object.distance].join(" = ") + "</p>");
-    }
-}
 
 /**
  * CSS for map on web and mobile
@@ -313,7 +318,7 @@ function setNewMarker(object, center)
     });
 
     if (center)
-        map.setCenter(options.position);
+        map.setCenter(lngLat(object));
 }
 
 /**
@@ -321,7 +326,7 @@ function setNewMarker(object, center)
  * @param location
  * @param radius
  */
-function performLookup(location, radius)
+function performDistanceLookup(location, radius)
 {
     var alldist = searchable.map(function (object) {
         var distance = determineDistance(location, object).distance;

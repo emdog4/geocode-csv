@@ -24,37 +24,41 @@
 <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
 <![endif]-->
 
-<fieldset class="ui-widget">
+<fieldset>
     <h2>Step 1</h2>
 
+    <p class="info" hidden>Please ensure your file has the following headers: "Company", "Business Street", "Business City", "Business State", "Business Postal Code"</p>
     <label for="file-new">Convert a CSV file:</label>
     <input type="file" id="file-new">
     <button id="submit-new">Convert</button>
-    <label for="has-headers">File has a header row</label>
-    <input type="checkbox" id="has-headers" checked>
     <a download="datasource.csv" id="datasource-link" style="display: none">Download</a>
 
     <p><strong>or:</strong></p>
 
+    <p class="info" hidden>Please ensure your file has the following headers: "name", "address", "lat", "lng"</p>
     <label for="file-datasource">Use an existing data source:</label>
     <input type="file" id="file-datasource">
     <button id="submit-datasource">Upload</button>
     <span id="upload-success" style="display: none">Success</span>
 </fieldset>
 
-<fieldset class="ui-widget">
+<fieldset hidden>
     <h2>Step 2</h2>
 
-    <label for="current-location">Don't use my current location</label>
+    <p class="info" hidden>Please enable Location Services in your browser</p>
+    <label for="current-location">Use my current location</label>
     <input type="checkbox" id="current-location">
+
     <p><strong>or:</strong></p>
-    <div class="ui-widget">
-        <label for="listings">Search for a listing:</label>
-        <input type="text" id="listings" placeholder="Enter a business name or address">
+
+    <div  class="ui-widget">
+        <label for="autocomplete-listings">Search for a listing:</label>
+        <input type="text" id="autocomplete-listings" placeholder="Enter a business name or address">
     </div>
+    <button id="submit-location">Next..</button>
 </fieldset>
 
-<fieldset class="ui-widget">
+<fieldset hidden>
     <h2>Step 3</h2>
 
     <label>Select a radius to search:</label>
@@ -65,23 +69,13 @@
         <option value="200">200 miles</option>
         <option value="500">500 miles</option>
     </select>
-
-    <label for="use-map">Show results on map</label>
-    <input type="checkbox" id="use-map" checked>
-
-    <label for="print-results">Show results on this page</label>
-    <input type="checkbox" id="print-results" checked>
-</fieldset>
-
-<fieldset class="ui-widget">
-    <h2>Step 4</h2>
-    <label>Calculate distances:</label>
     <button id="submit-calculate">Go</button>
+
 </fieldset>
 
-<div id="distance-results" style="display: none"></div>
+<div id="distance-results"></div>
 
-<div id="map-canvas" style="display: none"></div>
+<div id="map-canvas"></div>
 
 </body>
 </html>
