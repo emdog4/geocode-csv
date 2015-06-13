@@ -1,8 +1,4 @@
 /**
- * Created by emery on 6/11/15.
- */
-
-/**
  * Maps Object model
  * @param name
  * @param address
@@ -27,22 +23,16 @@ $(function()
 {
     $("#submit-new").click(function()
     {
-        var config = buildConfig($("#hasheaders").prop("checked"), true, main, error);
-
         $("#file-new").parse({
-            config: config
+            config: buildConfig($("#hasheaders").prop("checked"), true, main, error)
         });
-
     });
 
     $("#submit-datasource").click(function()
     {
-        var config = buildConfig(false, true, setDatasource, error);
-
         $("#file-datasource").parse({
-            config: config
+            config: buildConfig(false, true, setDatasource, error)
         });
-
     });
 
     $("#submit-calculate").click(run);
@@ -107,9 +97,9 @@ function error(error, file)
  */
 function buildSearchableMapsObjects(data)
 {
-    for(var i = 0; i < data.length; i++)
+    for(var index = 0; index < data.length; index++)
     {
-        var obj = data[i];
+        var obj = data[index];
 
         var name = obj["Company"];
         var street = obj["Business Street"];
@@ -119,14 +109,12 @@ function buildSearchableMapsObjects(data)
 
         if(!(street && city && state && zip))
         {
-            console.log("OUTPUT: Incomplete Address at Line Number: ", i ,street, city, state, zip);
+            console.log("OUTPUT: Incomplete Address at Line Number: ", index ,street, city, state, zip);
         }
 
         var address = street + ", " + city + ", " + state + ", " + zip;
 
-        var geo = geocode(address);
-
-        searchable[i] = new MapsObject(name, address, geo.latitude, geo.longitude);
+        geocode(name, address, index);
     }
 
     return {
@@ -138,7 +126,7 @@ function buildSearchableMapsObjects(data)
  * Geocode using Google Maps API, returns latitude and longitude
  * @param address
  */
-function geocode(address)
+function geocode(name, address, index)
 {
     var baseURL = "https://maps.googleapis.com/maps/api/geocode/json?address=";
 
@@ -153,10 +141,7 @@ function geocode(address)
         {
             var geocode = data.results[0];
 
-            return {
-                latitude: geocode.geometry.location.lat,
-                longitude: geocode.geometry.location.lng
-            };
+            searchable[index] = new MapsObject(name, address, geocode.geometry.location.lat, geocode.geometry.location.lng);
         }
     });
 }
@@ -168,15 +153,16 @@ function geocode(address)
 function createDownloadLink(searchable)
 {
     var file = null;
-    var text = Papa.unparse(searchable);
+    var json = JSON.stringify(searchable);
+    var text = Papa.unparse(json);
 
     if (file !== null) {
         window.URL.revokeObjectURL(file);
     }
 
-    file = window.URL.createObjectURL(new Blob(text, {type: "text/plain"}));
+    file = window.URL.createObjectURL(new Blob([text], {type: "text/plain"}));
 
-    $("#downloadlink").attr("href", file).show();
+    $("#datasource-link").attr("href", file).show();
 }
 
 /**
@@ -185,7 +171,7 @@ function createDownloadLink(searchable)
  * @param two
  * @returns {number}
  */
-function getDistance(one, two)
+function determineDistance(one, two)
 {
     var km2miles = 0.62137;
 
@@ -198,36 +184,26 @@ function getDistance(one, two)
     return Math.ceil(Math.sqrt(Math.pow(latmiles,2) + Math.pow(lngmiles,2)));
 }
 
-/**
- * Support
- */
-
 var map;
 
+/**
+ * Function when Go button pressed
+ */
 function run()
 {
     detectBrowser();
 
-    var mapOptions = {
+    map = new google.maps.Map($("#map-canvas").show(), {
         zoom: 14,
         center: new google.maps.LatLng(34.000791, -81.034849),
         panControl: true,
         zoomControl: true,
         scaleControl: true
-    }
+    });
 
-    var mapid = $("#map-canvas");
-
-    map = new google.maps.Map(mapid,
-        mapOptions);
-
-    mapid.show();
-
-    var position;
-
-    if($("#currentlocation").checkbox().checked())
+    if($("#current-location").checkbox().checked())
     {
-        setMapCenter("Current Location", geolocate().location);
+        setNewMarker({name:"Current Location"}, geolocate().location, true);
     }
     else
     {
@@ -237,12 +213,26 @@ function run()
                 return index;
         });
 
-        var listing = searchable[index];
+        var object = searchable[index];
 
-        setMapCenter(listing.name, new google.maps.LatLng(listing.latitude, listing.longitude));
+        setNewMarker(object.name, new google.maps.LatLng(object.latitude, object.longitude), false);
     }
+
+    var print = $("#print-results").checkbox().checked();
+    if (print)
+        var results = $("#distance-results").show();
+
+    performLookup().results.forEach(function(object) {
+        setNewMarker(object, new google.maps.LatLng(object.latitude, object.longitude), false);
+
+        if (print)
+            results.append("<p>" + [object.name, object.distance].join(" = ") + "</p>");
+    });
 }
 
+/**
+ * CSS for map on web and mobile
+ */
 function detectBrowser()
 {
     var useragent = navigator.userAgent;
@@ -271,33 +261,55 @@ function geolocate()
             };
 
         }, function() {
-            setMapCenter("Error: The Geolocation API service failed.", false);
+            setNewMarker("Error: The Geolocation API service failed.", 0, 0);
         });
     } else {
-        setMapCenter("Error: Your browser doesn't support geolocation.", false);
+        setNewMarker("Error: Your browser doesn't support geolocation.", 0, 0);
     }
-
 }
 
-function setMapCenter(content, latlng)
+/**
+ * Set map center with info window helper
+ * @param content
+ * @param latlng
+ */
+function setNewMarker(object, latlng, center)
 {
-    var position = latlng || new google.maps.LatLng(34.000791, -81.034849);
+    var infowindow = new google.maps.InfoWindow({
+        content: object.name
+    });
 
-    var options = {
+    var marker = new google.maps.Marker({
+        position: latlng || new google.maps.LatLng(34.000791, -81.034849),
         map: map,
-        position: position,
-        content: content
-    };
+        title: object.name
+    });
 
-    var infowindow = new google.maps.InfoWindow(options);
+    google.maps.event.addListener(marker, 'click', function() {
+        infowindow.open(map,marker);
+    });
 
-    map.setCenter(options.position);
+    if (center)
+        map.setCenter(options.position);
 }
 
-function performLookup(index, radius, variables)
+/**
+ * Lookup by distance by radius
+ * @param location
+ * @param radius
+ */
+function performLookup(location, radius)
 {
-    var lookup = variables[index];
-
-    //return variables.filter(function(item) { return (item != lookup) && ; });
-
+    return {
+        results: searchable.map(function (object) {
+            if (determineDistance(object, location) <= radius) {
+                return object;
+            }
+        }).sort(function (a, b) {
+            if (a.distance == b.distance)
+                return 0;
+            else
+                return a.distance > b.distance ? 1 : 0;
+        })
+    };
 }
